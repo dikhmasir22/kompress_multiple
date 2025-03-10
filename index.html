@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multiple Image Compressor</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    
+</head>
+
+<body>
+
+    <div class="container">
+        <h2>Multiple Compress</h2>
+        <input type="file" id="upload" accept="image/*" multiple>
+        <div class="preview-container" id="preview"></div>
+        <button class="btn" id="compress">Kompress gambar</button>
+        <a id="download" class="download-btn" download="compressed_images.zip">Unduh ZIP</a>
+    </div>
+
+    <canvas id="canvas" style="display: none;"></canvas>
+
+    <script>
+        const uploadInput = document.getElementById('upload');
+        const previewContainer = document.getElementById('preview');
+        const compressButton = document.getElementById('compress');
+        const downloadLink = document.getElementById('download');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let files = [];
+
+        uploadInput.addEventListener('change', function (event) {
+            previewContainer.innerHTML = '';
+            files = Array.from(event.target.files);
+
+            files.forEach(file => {
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(file);
+                previewContainer.appendChild(img);
+            });
+        });
+
+        compressButton.addEventListener('click', function () {
+            if (files.length === 0) {
+                alert('Pilih gambar dulu!');
+                return;
+            }
+
+            const zip = new JSZip();
+            let processed = 0;
+
+            files.forEach((file, index) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = function (event) {
+                    const img = new Image();
+                    img.src = event.target.result;
+                    img.onload = function () {
+                        // Atur ukuran baru (50% lebih kecil)
+                        const maxWidth = img.naturalWidth * 0.5;
+                        const maxHeight = img.naturalHeight * 0.5;
+
+                        canvas.width = maxWidth;
+                        canvas.height = maxHeight;
+                        ctx.drawImage(img, 0, 0, maxWidth, maxHeight);
+
+                        canvas.toBlob(blob => {
+                            zip.file(`compressed_${index + 1}.jpg`, blob);
+
+                            processed++;
+                            if (processed === files.length) {
+                                zip.generateAsync({ type: 'blob' }).then(function (content) {
+                                    const zipUrl = URL.createObjectURL(content);
+                                    downloadLink.href = zipUrl;
+                                    downloadLink.style.display = 'inline-block';
+                                });
+                            }
+                        }, 'image/jpeg', 0.7);
+                    };
+                };
+            });
+        });
+    </script>
+
+</body>
+
+</html>
